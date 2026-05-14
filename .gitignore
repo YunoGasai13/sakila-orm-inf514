@@ -13,9 +13,13 @@ out/
 # Compiled Java classes
 *.class
 target/
+build/
 
-# JAR files
-# *.jar
+# Libraries (MySQL Connector descargado)
+lib/
+
+# JAR files compilados
+*.jar
 
 # OS files
 .DS_Store
