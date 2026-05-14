@@ -10,55 +10,26 @@ import java.util.Map;
 
 /**
  * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
- * INF514 Z06 | ORM Sakila DB
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
  *
- * Clase abstracta DataContext - PADRE de todos los modelos ORM.
- * NOMBRE REQUERIDO POR EL PROFESOR: DataContext (no EntityModel).
+ * Padre abstracto hibrido con metodos concretos final. Encapsula la
+ * conectividad JDBC y los queries base reutilizados por cada modelo.
  *
- * Es un "padre abstracto hibrido" porque:
- *   - Tiene metodos CONCRETOS (con implementacion real)
- *   - Los metodos son declarados FINAL: los hijos NO pueden hacer override
- *   - Es abstracto: no se puede instanciar directamente
- *
- * Encapsula TODA la conectividad con MySQL via JDBC.
- * Usa PreparedStatement para prevenir SQL Injection.
- *
- * Metodos de escritura (CRUD):
- *   dbPost()   = INSERT
- *   dbPut()    = UPDATE
- *   dbDelete() = soft delete (UPDATE active=0)
- *
- * Metodos de lectura (Find overloads):
- *   Find()                  = SELECT top 10 default
- *   Find(boolean)           = SELECT hasta 5000
- *   Find(Object pkVal)      = SELECT por PK
- *   Find(String search)     = SELECT LIKE texto
- *   Find(String, Object fk) = SELECT LIKE + FK filter
- *   Find(Date, Date)        = SELECT BETWEEN fechas
- *   Find(String, boolean)   = SELECT raw SQL libre
- *
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
- * @version 1.0
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public abstract class DataContext implements Closeable {
 
-    // ─── Configuracion del objeto/tabla ───────────────────────────────────────
-    /** Nombre de la tabla en la DB */
+    // Configuracion de la tabla, recibida via constructor
     private final String _objectName;
-    /** Columna llave primaria */
     private final String _pkColumn;
-    /** Columna(s) para busqueda LIKE */
     private final String _searchExpr;
-    /** Columna FK para filtros combinados */
     private final String _fkColumn;
-    /** Columna(s) para ORDER BY */
     private final String _ordColumns;
-    /** Columna de fecha para BETWEEN */
     private final String _dateColumn;
-    /** Limite de registros default */
     private static final int REC_TOP = 10;
 
-    // ─── Objetos JDBC ─────────────────────────────────────────────────────────
+    // Conexion y statements reutilizables (uno por tipo de query)
     private Connection          oConn            = null;
     private ResultSetMetaData   objectMeta       = null;
     private HashMap<String, Integer> colIndexes  = null;
@@ -72,34 +43,18 @@ public abstract class DataContext implements Closeable {
     private Statement           rawStm           = null;
     private ArrayList<Statement> allStms         = null;
 
-    /** Mensaje de la ultima operacion (error o exito) */
+    /** Ultimo mensaje de error o resultado de operacion. */
     protected String actionMessage;
 
-    /** Patron SQL base reutilizable para todos los SELECT */
     private static final String SQL_BASE =
             "SELECT * FROM {obj} WHERE {filter} ORDER BY {order} LIMIT 0,{top}";
 
-    // ─── Constructores ────────────────────────────────────────────────────────
-
-    /**
-     * Constructor basico: nombre de tabla, PK y columna de busqueda.
-     * @param objName nombre de la tabla
-     * @param pkCol   columna PK
-     * @param search  columna(s) para busqueda LIKE
-     */
+    /** Constructor basico: tabla + PK + columna de busqueda. */
     public DataContext(String objName, String pkCol, String search) {
         this(objName, pkCol, search, "", "2,1", "");
     }
 
-    /**
-     * Constructor completo: incluye FK, orden y columna de fecha.
-     * @param objName nombre de la tabla
-     * @param pkCol   columna PK
-     * @param search  columna(s) busqueda
-     * @param fkCol   columna FK
-     * @param ordCol  columna(s) ORDER BY
-     * @param dateCol columna de fecha para BETWEEN
-     */
+    /** Constructor completo: incluye FK, orden y columna de fecha. */
     public DataContext(String objName, String pkCol, String search,
                        String fkCol, String ordCol, String dateCol) {
         this._objectName = objName;
@@ -111,15 +66,11 @@ public abstract class DataContext implements Closeable {
         initConnection();
     }
 
-    // ─── METODOS FINAL: los hijos NO pueden hacer override ───────────────────
+    // ── Find: overloads de lectura. Final para que no se puedan sobreescribir.
 
-    /**
-     * Find 1: SELECT default (primeros 10 registros).
-     * FINAL: el hijo no puede sobrescribir este comportamiento.
-     *
-     * @return ResultSet con los datos o null si hay error
-     */
+    /** Primeros 10 registros con orden default. */
     protected final ResultSet Find() {
+        // Ejecuta el SELECT default ya preparado y devuelve el ResultSet
         try {
             return prepDefault.executeQuery();
         } catch (SQLException e) {
@@ -128,13 +79,7 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    /**
-     * Find 2: SELECT completo hasta 5000 registros.
-     * FINAL: el hijo no puede sobrescribir este comportamiento.
-     *
-     * @param isFull true para activar modo completo
-     * @return ResultSet con los datos
-     */
+    /** Modo full: hasta 5000 registros. */
     protected final ResultSet Find(boolean isFull) {
         try {
             return isFull ? prepFull.executeQuery() : Find();
@@ -144,14 +89,9 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    /**
-     * Find 3: SELECT por llave primaria.
-     * FINAL: el hijo no puede sobrescribir este comportamiento.
-     *
-     * @param pkVal valor del PK a buscar
-     * @return ResultSet con el registro encontrado
-     */
+    /** Busqueda por PK exacta. */
     protected final ResultSet Find(Object pkVal) {
+        // Inyecta el valor del PK en el statement parametrizado
         try {
             prepByPK.setObject(1, pkVal);
             return prepByPK.executeQuery();
@@ -161,13 +101,7 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    /**
-     * Find 4: SELECT por texto LIKE (busqueda parcial en columnas string).
-     * FINAL: el hijo no puede sobrescribir este comportamiento.
-     *
-     * @param search texto a buscar (comodines % se agregan automaticamente)
-     * @return ResultSet con los registros que contienen el texto
-     */
+    /** Busqueda LIKE en la columna de busqueda configurada. */
     protected final ResultSet Find(String search) {
         try {
             prepBySearch.setString(1, search);
@@ -178,14 +112,7 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    /**
-     * Find 5: SELECT por texto LIKE + filtro de FK.
-     * FINAL: el hijo no puede sobrescribir este comportamiento.
-     *
-     * @param search texto a buscar
-     * @param fkVal  valor del FK para filtrar
-     * @return ResultSet con los registros que coinciden
-     */
+    /** LIKE + filtro por FK. */
     protected final ResultSet Find(String search, Object fkVal) {
         try {
             prepBySearchFK.setString(1, search);
@@ -197,14 +124,7 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    /**
-     * Find 6: SELECT por rango de fechas BETWEEN.
-     * FINAL: el hijo no puede sobrescribir este comportamiento.
-     *
-     * @param dateIn  fecha inicio del rango
-     * @param dateOut fecha fin del rango
-     * @return ResultSet con los registros en ese rango
-     */
+    /** Rango de fechas BETWEEN. */
     protected final ResultSet Find(Date dateIn, Date dateOut) {
         try {
             prepByDateRange.setDate(1, new java.sql.Date(dateIn.getTime()));
@@ -216,14 +136,7 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    /**
-     * Find 7: SELECT con SQL libre (raw query para reportes especiales).
-     * FINAL: el hijo no puede sobrescribir este comportamiento.
-     *
-     * @param rawSql SQL completo a ejecutar
-     * @param isRaw  debe ser true para confirmar uso raw
-     * @return ResultSet con los resultados
-     */
+    /** SQL libre para reportes con JOIN. */
     public final ResultSet Find(String rawSql, boolean isRaw) {
         if (!isRaw) return null;
         try {
@@ -234,15 +147,11 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    /**
-     * dbPost: INSERT de un nuevo registro en la DB.
-     * Recibe el HashMap col->valor del hijo via SerializerMap().
-     * FINAL: el hijo no puede sobrescribir la logica de INSERT.
-     *
-     * @param insertData HashMap con columna -> valor
-     * @return true si el INSERT fue exitoso
-     */
+    // ── Operaciones de escritura. Cada modelo arma el HashMap col->valor y delega aqui.
+
+    /** INSERT con los campos del HashMap. */
     protected final boolean dbPost(HashMap<String, String> insertData) {
+        // Arma el INSERT con los datos del modelo y lo ejecuta
         try {
             rawStm.execute(buildInsertSQL(insertData));
             return true;
@@ -252,14 +161,7 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    /**
-     * dbPut: UPDATE de un registro existente en la DB.
-     * Recibe el HashMap col->valor del hijo via SerializerMap().
-     * FINAL: el hijo no puede sobrescribir la logica de UPDATE.
-     *
-     * @param updateData HashMap con columna -> valor (debe incluir PK)
-     * @return true si el UPDATE fue exitoso
-     */
+    /** UPDATE usando el PK del HashMap. */
     protected final boolean dbPut(HashMap<String, String> updateData) {
         try {
             rawStm.execute(buildUpdateSQL(updateData));
@@ -270,17 +172,9 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    /**
-     * dbDelete: SOFT DELETE - marca el registro como inactivo.
-     * En lugar de DELETE fisico, hace UPDATE active=0.
-     * Preserva la integridad referencial (rentas, pagos siguen siendo validos).
-     * FINAL: el hijo no puede sobrescribir la logica de soft delete.
-     *
-     * @param pkVal     valor del PK del registro a desactivar
-     * @param activeCol nombre de la columna active en esa tabla
-     * @return true si el soft delete fue exitoso
-     */
+    /** Soft delete: marca el registro como inactivo en lugar de borrarlo. */
     protected final boolean dbDelete(Object pkVal, String activeCol) {
+        // No hace DELETE fisico: cambia la columna active a 0 para preservar FKs
         try {
             String sql = "UPDATE " + _objectName + " SET " + activeCol +
                          " = 0 WHERE " + _pkColumn + " = " + pkVal;
@@ -292,14 +186,9 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    /**
-     * Obtiene el valor maximo actual del PK.
-     * Usado por los hijos en Post() para asignar el siguiente ID.
-     * FINAL: el hijo no puede sobrescribir este calculo.
-     *
-     * @return long con MAX(PK), -1 si hay error
-     */
+    /** MAX(PK) actual. Usado por Post() para asignar el siguiente ID. */
     protected final long getMaxID() {
+        // Consulta el mayor PK de la tabla; el Post() le suma 1 para el nuevo registro
         try {
             ResultSet rmax = prepMaxID.executeQuery();
             rmax.next();
@@ -312,30 +201,30 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    // ─── Metodos privados internos ────────────────────────────────────────────
+    // ── JDBC: conexion y preparacion de statements (privado interno)
 
-    /**
-     * Inicializa la conexion a DB y prepara todos los PreparedStatements.
-     * Se llama automaticamente desde el constructor.
-     */
+    /** Abre conexion, prepara statements y carga metadatos de la tabla. */
     @SuppressWarnings("deprecation")
     private void initConnection() {
         try {
+            // Valida que el hijo haya pasado los datos minimos
             if (_objectName.isBlank() || _pkColumn.isBlank() || _searchExpr.isBlank())
                 throw new Exception("objectName, pkColumn y searchExpr son requeridos.");
 
+            // Lee config.properties y arma la URL JDBC con usuario y password
             PropertyFile cfg = new PropertyFile();
             String driver = cfg.getPropValue("dbdriver");
             String dbUrl  = cfg.getPropValue("dburl")
                           + "?user="     + cfg.getPropValue("dbuser")
                           + "&password=" + cfg.getPropValue("dbpassword");
 
+            // Carga el driver y abre la conexion
             Class.forName(driver).newInstance();
             oConn  = DriverManager.getConnection(dbUrl);
             rawStm = oConn.createStatement();
             prepareStatements();
 
-            // Obtener metadatos con PK imposible (-999) sin datos reales
+            // PK imposible para leer metadatos sin traer registros reales
             ResultSet metaRs = Find(Integer.valueOf(-999));
             if (metaRs != null) {
                 objectMeta = metaRs.getMetaData();
@@ -351,10 +240,7 @@ public abstract class DataContext implements Closeable {
         }
     }
 
-    /**
-     * Prepara todos los PreparedStatements reutilizables en base al SQL_BASE.
-     * @throws SQLException si algun statement falla al prepararse
-     */
+    /** Prepara los PreparedStatement reusando SQL_BASE con distintos filtros. */
     private void prepareStatements() throws SQLException {
         String base = SQL_BASE
                 .replace("{obj}",   _objectName)
@@ -383,21 +269,14 @@ public abstract class DataContext implements Closeable {
         allStms.add(prepFull);     allStms.add(rawStm);
     }
 
-    /**
-     * Construye el mapa colIndexes: nombre_columna -> tipo_SQL.
-     * @throws SQLException si los metadatos no estan disponibles
-     */
+    /** Mapa columna -> tipo SQL para decidir si va con comillas o no en INSERT/UPDATE. */
     private void buildColumnIndex() throws SQLException {
         colIndexes = new HashMap<>();
         for (int i = 1; i <= objectMeta.getColumnCount(); i++)
             colIndexes.put(objectMeta.getColumnName(i), objectMeta.getColumnType(i));
     }
 
-    /**
-     * Construye el SQL UPDATE desde un HashMap col->valor.
-     * @param data HashMap con los datos (debe incluir el PK)
-     * @return String con el SQL UPDATE completo
-     */
+    /** Arma UPDATE ... SET col=val WHERE pk=val. */
     private String buildUpdateSQL(HashMap<String, String> data) {
         StringBuilder sb = new StringBuilder("UPDATE " + _objectName + " SET ");
         char sep = ' ';
@@ -413,11 +292,7 @@ public abstract class DataContext implements Closeable {
         return sb.toString();
     }
 
-    /**
-     * Construye el SQL INSERT desde un HashMap col->valor.
-     * @param data HashMap con los datos del nuevo registro
-     * @return String con el SQL INSERT completo
-     */
+    /** Arma INSERT INTO tabla(cols) VALUES(vals). */
     private String buildInsertSQL(HashMap<String, String> data) {
         StringBuilder cols = new StringBuilder("INSERT INTO " + _objectName + " (");
         StringBuilder vals = new StringBuilder(" VALUES (");
@@ -430,22 +305,12 @@ public abstract class DataContext implements Closeable {
         return cols + ") " + vals + ")";
     }
 
-    /**
-     * Formatea un valor para SQL: numerico sin comillas, texto con comillas simples.
-     * @param colName nombre de la columna para detectar el tipo
-     * @param value   valor a formatear
-     * @return String listo para insertar en SQL
-     */
+    /** Numerico va sin comillas, texto con comillas simples. */
     private String toSQLValue(String colName, String value) {
         if (colIndexes == null || !colIndexes.containsKey(colName)) return "'" + value + "'";
         return isNumericType(colIndexes.get(colName)) ? value : "'" + value + "'";
     }
 
-    /**
-     * Determina si un tipo SQL es numerico.
-     * @param sqlType constante de java.sql.Types
-     * @return true si es numerico
-     */
     private boolean isNumericType(int sqlType) {
         return switch (sqlType) {
             case Types.INTEGER, Types.BIGINT, Types.SMALLINT, Types.TINYINT,
@@ -455,20 +320,12 @@ public abstract class DataContext implements Closeable {
         };
     }
 
-    // ─── Metodos publicos de soporte ──────────────────────────────────────────
-
-    /**
-     * Retorna el ultimo mensaje de error o resultado de operacion.
-     * @return String con el mensaje
-     */
     public final String getMessage() { return actionMessage; }
 
-    /**
-     * Cierra todos los statements y la conexion a la DB.
-     * SIEMPRE llamar al terminar de usar el modelo.
-     */
+    /** Cierra statements y conexion. Se sobreescribe en modelos con auxiliares para cerrarlos tambien. */
     @Override
-    public final void close() {
+    public void close() {
+        // Libera todos los statements preparados y la conexion JDBC
         try {
             if (allStms != null)
                 for (Statement s : allStms)

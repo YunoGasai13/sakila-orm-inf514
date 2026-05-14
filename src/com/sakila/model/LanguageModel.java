@@ -7,13 +7,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * INF514 Z06 | LanguageModel - hijo FINAL de DataContext | tabla language
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
+ * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
+ *
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public final class LanguageModel extends DataContext implements iDatapost {
 
     private ArrayList<Language> allData;
 
+    /** tabla=language | PK=language_id | busqueda por name. */
     public LanguageModel() {
         super("language", "language_id", "name", "", "name", "last_update");
     }
@@ -41,7 +45,7 @@ public final class LanguageModel extends DataContext implements iDatapost {
 
     @Override public boolean Post(Entity o)  { Language l=(Language)o; l.languageId=(int)(getMaxID()+1); return super.dbPost(SerializerMap(l)); }
     @Override public boolean Put(Entity o)   { return super.dbPut(SerializerMap(o)); }
-    @Override public boolean Delete(Entity o){ return false; } // language no tiene active
+    @Override public boolean Delete(Entity o){ return false; }
 
     @Override
     public HashMap<String,String> SerializerMap(Entity o) {

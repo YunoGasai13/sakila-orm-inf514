@@ -9,50 +9,27 @@ import java.util.stream.Collectors;
 
 /**
  * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
- * INF514 Z06 | ORM Sakila DB
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
  *
- * Modelo ActorModel - hijo CONCRETO y FINAL de DataContext.
- * FINAL: no puede ser extendido por otras clases.
- * Implementa iDatapost: cumple el contrato CRUD.
- *
- * Gestiona el ArrayList de objetos Actor con:
- *   Post()   = INSERT nuevo actor
- *   Get()    = SELECT (varios overloads)
- *   Put()    = UPDATE actor existente
- *   Delete() = Soft delete (last_update, no campo active en actor)
- *
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
- * @version 1.0
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public final class ActorModel extends DataContext implements iDatapost {
 
-    /** ArrayList con los actores cargados en memoria */
+    /** Lista de actores en memoria. */
     private ArrayList<Actor> allData;
 
-    /**
-     * Constructor: configura DataContext para la tabla actor.
-     * Parametros:
-     *   tabla:    actor
-     *   PK:       actor_id
-     *   busqueda: CONCAT(first_name,' ',last_name)
-     *   FK:       (ninguno)
-     *   orden:    last_name, first_name
-     *   fecha:    last_update
-     */
+    /** tabla=actor | PK=actor_id | busqueda por nombre+apellido | orden por apellido. */
     public ActorModel() {
         super("actor", "actor_id",
               "CONCAT(first_name,' ',last_name)",
               "", "last_name, first_name", "last_update");
     }
 
-    /**
-     * Mapea el ResultSet a objetos Actor y los guarda en allData.
-     * Lee columna por columna segun la estructura de la tabla actor.
-     *
-     * @param rSet ResultSet proveniente de los metodos Find() del padre
-     */
+    /** ResultSet -> ArrayList<Actor>. */
     @Override
     public void Mapping(ResultSet rSet) {
+        // Recorro cada fila del ResultSet y la convierto en un objeto Actor
         allData = new ArrayList<>();
         if (rSet == null) return;
         try {
@@ -70,79 +47,43 @@ public final class ActorModel extends DataContext implements iDatapost {
         }
     }
 
-    // ─── GET overloads ────────────────────────────────────────────────────────
-
-    /** @return primeros 10 actores ordenados por apellido */
+    // ── Get: overloads que delegan en Find() del padre y mapean a Actor.
     @Override public ArrayList<Actor> Get()                      { Mapping(super.Find());        return allData; }
-    /** @param id actor_id exacto */
     @Override public ArrayList<Actor> Get(Object id)             { Mapping(super.Find(id));      return allData; }
-    /** @param search texto parcial en nombre o apellido */
     @Override public ArrayList<Actor> Get(String search)         { Mapping(super.Find(search));  return allData; }
-    /** Actor no tiene FK principal, retorna null */
     @Override public ArrayList<Actor> Get(String s, Object fk)   { return null; }
-    /** @param d1 fecha inicio | @param d2 fecha fin */
     @Override public ArrayList<Actor> Get(Date d1, Date d2)      { Mapping(super.Find(d1,d2));   return allData; }
-    /** @return lista en memoria sin consultar DB */
     @Override public ArrayList<Actor> getData()                   { return allData; }
 
-    // ─── POST (Create) ────────────────────────────────────────────────────────
-
-    /**
-     * Post: inserta un nuevo actor en la DB.
-     * Calcula el siguiente actor_id con getMaxID() + 1.
-     *
-     * @param odata Actor con firstName y lastName (actorId se genera aqui)
-     * @return true si el INSERT fue exitoso
-     */
+    /** Post: asigna actor_id = MAX(actor_id) + 1 e inserta. */
     @Override
     public boolean Post(Entity odata) {
+        // Calculo el siguiente ID, seteo la fecha y delego el INSERT al padre
         Actor a = (Actor) odata;
         a.actorId    = (int)(super.getMaxID() + 1);
         a.lastUpdate = new Date();
         return super.dbPost(SerializerMap(a));
     }
 
-    // ─── PUT (Update) ─────────────────────────────────────────────────────────
-
-    /**
-     * Put: actualiza un actor existente en la DB.
-     * @param odata Actor con actorId + datos actualizados
-     * @return true si el UPDATE fue exitoso
-     */
     @Override
     public boolean Put(Entity odata) {
         return super.dbPut(SerializerMap(odata));
     }
 
-    // ─── DELETE (Soft delete) ─────────────────────────────────────────────────
-
-    /**
-     * Delete: la tabla actor no tiene campo active.
-     * En este caso actualizamos last_update para registrar la operacion.
-     * En produccion real se agregaria un campo active a la tabla.
-     *
-     * @param odata Actor con actorId del registro a desactivar
-     * @return true si la operacion fue exitosa
-     */
+    /** Tabla actor no tiene campo active; se marca con fecha antigua. */
     @Override
     public boolean Delete(Entity odata) {
+        // Como sakila.actor no tiene active, marco last_update muy antigua para indicar "inactivo"
         Actor a = (Actor) odata;
-        // Actor no tiene campo active; marcamos via update de last_update
-        // En un sistema real se agregaria: ALTER TABLE actor ADD active TINYINT DEFAULT 1
         HashMap<String, String> map = SerializerMap(a);
-        map.put("last_update", "1900-01-01"); // fecha antigua = inactivo logico
+        map.put("last_update", "1900-01-01");
         return super.dbPut(map);
     }
 
-    // ─── Serializadores ───────────────────────────────────────────────────────
-
-    /**
-     * Convierte un Actor a HashMap columna->valor para operaciones CUD.
-     * @param odata Actor a convertir (cast seguro)
-     * @return HashMap con los pares columna_db -> valor_string
-     */
+    /** Actor -> HashMap con cada columna de la tabla. */
     @Override
     public HashMap<String, String> SerializerMap(Entity odata) {
+        // Convierto el objeto en un map columna->valor para que dbPost/dbPut arme el SQL
         if (!(odata instanceof Actor)) return null;
         Actor a = (Actor) odata;
         HashMap<String, String> map = new HashMap<>();
@@ -153,14 +94,9 @@ public final class ActorModel extends DataContext implements iDatapost {
         return map;
     }
 
-    /**
-     * Serializa la lista actual a JSON.
-     * Formato: [{actor_id:1, first_name:"PENELOPE", last_name:"GUINESS"},...}]
-     *
-     * @return String con el JSON de la lista de actores
-     */
     @Override
     public String Serializer() {
+        // Construyo el JSON a mano con StringBuilder (sin libreria externa)
         if (allData == null || allData.isEmpty()) return "[]";
         StringBuilder sb = new StringBuilder("[");
         char sep = ' ';
@@ -173,14 +109,9 @@ public final class ActorModel extends DataContext implements iDatapost {
         return sb.append("]").toString();
     }
 
-    /**
-     * Serializa la lista actual a CSV.
-     * Primera linea = encabezados de columna.
-     *
-     * @return String con el CSV de la lista de actores
-     */
     @Override
     public String SerializerCSV() {
+        // Primera linea = headers, luego una fila por actor separada por comas
         if (allData == null || allData.isEmpty()) return "actor_id,first_name,last_name\n(sin datos)";
         StringBuilder sb = new StringBuilder("actor_id,first_name,last_name,last_update\n");
         for (Actor a : allData)
@@ -189,15 +120,10 @@ public final class ActorModel extends DataContext implements iDatapost {
         return sb.toString();
     }
 
-    /**
-     * Busca un actor en el ArrayList actual (en memoria, sin DB).
-     * Usa Java Streams y lambda para filtrar por actor_id.
-     *
-     * @param pid actor_id a buscar
-     * @return Actor encontrado o null si no esta en la lista actual
-     */
+    /** Busqueda por actor_id sobre la lista actual (no consulta DB). */
     @Override
     public Entity inMemSearch(Object pid) {
+        // Filtro el ArrayList con Streams para encontrar el actor por su ID
         if (allData == null) return null;
         int id = Integer.parseInt(pid.toString());
         List<Actor> found = allData.stream()

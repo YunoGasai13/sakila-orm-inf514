@@ -3,45 +3,54 @@ package com.sakila.model;
 import com.sakila.data.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * INF514 Z06 | RentalModel - hijo FINAL de DataContext | tabla rental
- * Gestiona rentas con Customer e Inventory embebidos (FK por agregacion).
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
+ * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
+ *
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public final class RentalModel extends DataContext implements iDatapost {
 
     private ArrayList<Rental> allData;
+    /** Auxiliares para resolver FK customer_id, inventory_id y staff_id por agregacion. */
     private CustomerModel  customerModel;
     private InventoryModel inventoryModel;
+    private StaffModel     staffModel;
 
+    /** tabla=rental | PK=rental_id | FK=customer_id | orden por fecha de renta DESC. */
     public RentalModel() {
         super("rental","rental_id","rental_id","customer_id","rental_date DESC","rental_date");
         customerModel  = new CustomerModel();
         inventoryModel = new InventoryModel();
+        staffModel     = new StaffModel();
     }
 
-    /**
-     * Mapea ResultSet a objetos Rental.
-     * Resuelve FK customer_id e inventory_id por agregacion de objetos.
-     */
+    /** ResultSet -> ArrayList<Rental>. Inyecta Customer y Staff completos; Inventory solo con su ID. */
     @Override
     public void Mapping(ResultSet rSet) {
+        // Cada renta arma sus relaciones: Customer y Staff completos, Inventory liviano
         allData = new ArrayList<>();
         if (rSet == null) return;
-        // Precarga en memoria para resolver FK sin multiples queries
+        // Precarga: clientes y staff de una sola vez para resolver FKs en memoria
         if (customerModel.getData() == null || customerModel.getData().isEmpty())
-            customerModel.Get(true); // metodo de CustomerModel que carga full
+            customerModel.Get(true);
+        if (staffModel.getData() == null || staffModel.getData().isEmpty())
+            staffModel.Get();
         try {
             while (rSet.next()) {
-                int custId = rSet.getInt("customer_id");
-                int invId  = rSet.getInt("inventory_id");
-                Customer  objCust = (Customer)  customerModel.inMemSearch(custId);
-                Inventory objInv  = new Inventory(); // simplificado para evitar N+1 queries
+                int custId  = rSet.getInt("customer_id");
+                int invId   = rSet.getInt("inventory_id");
+                int staffId = rSet.getInt("staff_id");
+                Customer  objCust  = (Customer)  customerModel.inMemSearch(custId);
+                Staff     objStaff = (Staff)     staffModel.inMemSearch(staffId);
+                // Inventory liviano: solo el ID para evitar precargar 4500+ registros
+                Inventory objInv   = new Inventory();
                 objInv.inventoryId = invId;
+                if (objStaff == null) { objStaff = new Staff(); objStaff.staffId = staffId; }
 
                 allData.add(new Rental(
                     rSet.getInt("rental_id"),
@@ -49,7 +58,7 @@ public final class RentalModel extends DataContext implements iDatapost {
                     objInv,
                     objCust != null ? objCust : new Customer(),
                     rSet.getDate("return_date"),
-                    rSet.getInt("staff_id"),
+                    objStaff,
                     rSet.getDate("last_update")));
             }
             rSet.close();
@@ -75,9 +84,10 @@ public final class RentalModel extends DataContext implements iDatapost {
 
     @Override public boolean Put(Entity o) { return super.dbPut(SerializerMap(o)); }
 
-    /** Rental: soft delete via return_date = fecha actual (marca como devuelta) */
+    /** Marca la renta como devuelta poniendo return_date = hoy. */
     @Override
     public boolean Delete(Entity o) {
+        // No borro la renta: la cierro fijando la fecha de devolucion = hoy
         Rental r=(Rental)o;
         HashMap<String,String> m=SerializerMap(r);
         m.put("return_date", Entity.getCurrentDate().toString());
@@ -87,14 +97,15 @@ public final class RentalModel extends DataContext implements iDatapost {
     @Override
     public HashMap<String,String> SerializerMap(Entity o) {
         Rental r=(Rental)o;
-        int custId = (r.objCustomer  != null) ? r.objCustomer.customerId  : 0;
-        int invId  = (r.objInventory != null) ? r.objInventory.inventoryId: 0;
+        int custId  = (r.objCustomer  != null) ? r.objCustomer.customerId   : 0;
+        int invId   = (r.objInventory != null) ? r.objInventory.inventoryId : 0;
+        int staffId = (r.objStaff     != null) ? r.objStaff.staffId         : 1;
         HashMap<String,String> m=new HashMap<>();
         m.put("rental_id",    String.valueOf(r.rentalId));
         m.put("rental_date",  Entity.getCurrentDate().toString());
         m.put("inventory_id", String.valueOf(invId));
         m.put("customer_id",  String.valueOf(custId));
-        m.put("staff_id",     String.valueOf(r.staffId>0?r.staffId:1));
+        m.put("staff_id",     String.valueOf(staffId > 0 ? staffId : 1));
         m.put("last_update",  Entity.getCurrentDate().toString());
         return m;
     }
@@ -118,9 +129,10 @@ public final class RentalModel extends DataContext implements iDatapost {
         if(allData==null||allData.isEmpty()) return "rental_id,customer,rental_date,return_date\n(sin datos)";
         StringBuilder sb=new StringBuilder("rental_id,customer_id,rental_date,return_date,staff_id\n");
         for(Rental r:allData){
-            int cid=(r.objCustomer!=null)?r.objCustomer.customerId:0;
+            int cid     = (r.objCustomer!=null)?r.objCustomer.customerId:0;
+            int staffId = (r.objStaff   !=null)?r.objStaff.staffId:0;
             sb.append(r.rentalId).append(",").append(cid).append(",")
-              .append(r.rentalDate).append(",").append(r.returnDate!=null?r.returnDate:"PENDIENTE").append(",").append(r.staffId).append("\n");
+              .append(r.rentalDate).append(",").append(r.returnDate!=null?r.returnDate:"PENDIENTE").append(",").append(staffId).append("\n");
         }
         return sb.toString();
     }
@@ -133,11 +145,5 @@ public final class RentalModel extends DataContext implements iDatapost {
         return f.isEmpty()?null:f.get(0);
     }
 
-    @Override public void close() { super.close(); customerModel.close(); inventoryModel.close(); }
+    @Override public void close() { super.close(); customerModel.close(); inventoryModel.close(); staffModel.close(); }
 }
-
-
-/**
- * INF514 Z06 | PaymentModel - hijo FINAL de DataContext | tabla payment
- * Incluye metodos utilitarios para reportes: total y promedio de pagos.
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]

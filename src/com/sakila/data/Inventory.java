@@ -4,47 +4,31 @@ import java.util.Date;
 
 /**
  * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
- * INF514 Z06 | ORM Sakila DB
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
  *
- * Entidad Inventory - mapea la tabla `inventory` de sakila.
- * Representa una copia fisica de una pelicula en una tienda.
+ * FK film_id y store_id manejadas por agregacion de objetos.
  *
- * FK gestionada por AGREGACION:
- *   Film objFilm  (en lugar de int filmId)
- *
- * Tabla: inventory(inventory_id, film_id, store_id, last_update)
- *
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
- * @version 1.0
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public final class Inventory extends Entity {
 
-    /** PK autoincrement */
     public int inventoryId;
-    /**
-     * FK film_id gestionada por AGREGACION.
-     * Acceso: inventory.objFilm.title
-     */
+    /** FK film_id en forma de objeto. Acceso: inventory.objFilm.title */
     public Film objFilm;
-    /** FK tienda donde esta la copia */
-    public int storeId;
-    /** Fecha ultima actualizacion */
+    /** FK store_id en forma de objeto. */
+    public Store objStore;
     public Date lastUpdate;
 
-    /** Constructor vacio */
-    public Inventory() { this.objFilm = new Film(); }
+    public Inventory() {
+        this.objFilm = new Film();
+        this.objStore = new Store();
+    }
 
-    /**
-     * Constructor completo.
-     * @param inventoryId ID del inventario
-     * @param objFilm     objeto Film (FK por agregacion)
-     * @param storeId     FK tienda
-     * @param lastUpdate  ultima actualizacion
-     */
-    public Inventory(int inventoryId, Film objFilm, int storeId, Date lastUpdate) {
+    public Inventory(int inventoryId, Film objFilm, Store objStore, Date lastUpdate) {
         this.inventoryId = inventoryId;
         this.objFilm     = objFilm;
-        this.storeId     = storeId;
+        this.objStore    = objStore;
         this.lastUpdate  = lastUpdate;
     }
 
@@ -52,15 +36,16 @@ public final class Inventory extends Entity {
     public void setInventoryId(int id)      { this.inventoryId = id; }
     public Film getObjFilm()                { return objFilm; }
     public void setObjFilm(Film f)          { this.objFilm = f; }
-    public int getStoreId()                 { return storeId; }
-    public void setStoreId(int id)          { this.storeId = id; }
+    public Store getObjStore()              { return objStore; }
+    public void setObjStore(Store s)        { this.objStore = s; }
     public Date getLastUpdate()             { return lastUpdate; }
     public void setLastUpdate(Date d)       { this.lastUpdate = d; }
 
     @Override
     public String toString() {
         String filmTitle = (objFilm != null) ? objFilm.title : "N/A";
+        int sid = (objStore != null) ? objStore.storeId : 0;
         return String.format("[Inventory] ID:%-5d | Film: %-25s | Tienda: %d",
-                inventoryId, filmTitle, storeId);
+                inventoryId, filmTitle, sid);
     }
 }

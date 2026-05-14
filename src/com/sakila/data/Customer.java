@@ -4,61 +4,44 @@ import java.util.Date;
 
 /**
  * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
- * INF514 Z06 | ORM Sakila DB
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
  *
- * Entidad Customer - mapea la tabla `customer` de sakila.
+ * FK store_id y address_id manejadas por agregacion de objetos.
+ * El campo active permite soft delete.
  *
- * NOTA SOBRE DELETE:
- * El campo `active` (1/0) permite el "soft delete":
- * en lugar de borrar el registro, se marca active=0 (inactivo).
- * Esto respeta la integridad referencial (rentas y pagos quedan intactos).
- *
- * Tabla: customer(customer_id, store_id, first_name, last_name,
- *                 email, address_id, active, create_date, last_update)
- *
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
- * @version 1.0
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public final class Customer extends Entity {
 
-    /** PK autoincrement */
     public int customerId;
-    /** FK tienda (1 o 2) */
-    public int storeId;
-    /** Nombre */
+    /** FK store_id en forma de objeto. */
+    public Store objStore;
     public String firstName;
-    /** Apellido */
     public String lastName;
-    /** Correo electronico */
     public String email;
-    /** FK address */
-    public int addressId;
-    /**
-     * Estado activo/inactivo.
-     * TRUE = activo | FALSE = inactivo (soft delete).
-     * El Delete() del modelo cambia este campo a false en lugar de eliminar.
-     */
+    /** FK address_id en forma de objeto. */
+    public Address objAddress;
+    /** true=ACTIVO, false=INACTIVO. Cambia a false en el soft delete. */
     public boolean active;
-    /** Fecha de registro del cliente */
     public Date createDate;
-    /** Fecha ultima actualizacion */
     public Date lastUpdate;
 
-    /** Constructor vacio */
-    public Customer() { this.active = true; }
+    public Customer() {
+        this.active = true;
+        this.objStore = new Store();
+        this.objAddress = new Address();
+    }
 
-    /**
-     * Constructor completo.
-     */
-    public Customer(int customerId, int storeId, String firstName, String lastName,
-                    String email, int addressId, boolean active,
+    public Customer(int customerId, Store objStore, String firstName, String lastName,
+                    String email, Address objAddress, boolean active,
                     Date createDate, Date lastUpdate) {
         this.customerId = customerId;
-        this.storeId    = storeId;
+        this.objStore   = objStore;
         this.firstName  = firstName;
         this.lastName   = lastName;
         this.email      = email;
-        this.addressId  = addressId;
+        this.objAddress = objAddress;
         this.active     = active;
         this.createDate = createDate;
         this.lastUpdate = lastUpdate;
@@ -66,16 +49,16 @@ public final class Customer extends Entity {
 
     public int getCustomerId()              { return customerId; }
     public void setCustomerId(int id)       { this.customerId = id; }
-    public int getStoreId()                 { return storeId; }
-    public void setStoreId(int id)          { this.storeId = id; }
+    public Store getObjStore()              { return objStore; }
+    public void setObjStore(Store s)        { this.objStore = s; }
     public String getFirstName()            { return firstName; }
     public void setFirstName(String n)      { this.firstName = n; }
     public String getLastName()             { return lastName; }
     public void setLastName(String n)       { this.lastName = n; }
     public String getEmail()                { return email; }
     public void setEmail(String e)          { this.email = e; }
-    public int getAddressId()               { return addressId; }
-    public void setAddressId(int id)        { this.addressId = id; }
+    public Address getObjAddress()          { return objAddress; }
+    public void setObjAddress(Address a)    { this.objAddress = a; }
     public boolean isActive()               { return active; }
     public void setActive(boolean a)        { this.active = a; }
     public Date getCreateDate()             { return createDate; }
@@ -85,8 +68,9 @@ public final class Customer extends Entity {
 
     @Override
     public String toString() {
+        int sid = (objStore != null) ? objStore.storeId : 0;
         return String.format("[Customer] ID:%-4d | %-12s %-15s | %-35s | Tienda:%d | %s",
-                customerId, firstName, lastName, email, storeId,
+                customerId, firstName, lastName, email, sid,
                 active ? "ACTIVO" : "INACTIVO");
     }
 }

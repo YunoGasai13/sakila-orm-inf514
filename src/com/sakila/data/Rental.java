@@ -4,64 +4,41 @@ import java.util.Date;
 
 /**
  * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
- * INF514 Z06 | ORM Sakila DB
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
  *
- * Entidad Rental - mapea la tabla `rental` de sakila.
- * Representa una transaccion de alquiler de pelicula.
+ * FK customer_id, inventory_id y staff_id manejadas por agregacion.
  *
- * FK gestionadas por AGREGACION/COMPOSICION:
- *   Customer objCustomer   (en lugar de int customerId)
- *   Inventory objInventory (en lugar de int inventoryId)
- *
- * Acceso: rental.objCustomer.firstName
- *         rental.objInventory.objFilm.title
- *
- * Tabla: rental(rental_id, rental_date, inventory_id,
- *               customer_id, return_date, staff_id, last_update)
- *
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
- * @version 1.0
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public final class Rental extends Entity {
 
-    /** PK autoincrement */
     public int rentalId;
-    /** Fecha en que se alquilo */
     public Date rentalDate;
-    /**
-     * FK inventory_id gestionada por AGREGACION.
-     * Acceso: rental.objInventory.objFilm.title
-     */
+    /** FK inventory_id en forma de objeto. */
     public Inventory objInventory;
-    /**
-     * FK customer_id gestionada por AGREGACION.
-     * Acceso: rental.objCustomer.firstName
-     */
+    /** FK customer_id en forma de objeto. */
     public Customer objCustomer;
-    /** Fecha de devolucion (null si no ha sido devuelta = PENDIENTE) */
+    /** null = renta pendiente de devolver. */
     public Date returnDate;
-    /** FK empleado que proceso */
-    public int staffId;
-    /** Fecha ultima actualizacion */
+    /** FK staff_id en forma de objeto. */
+    public Staff objStaff;
     public Date lastUpdate;
 
-    /** Constructor vacio */
     public Rental() {
         this.objInventory = new Inventory();
         this.objCustomer  = new Customer();
+        this.objStaff     = new Staff();
     }
 
-    /**
-     * Constructor completo con objetos embebidos.
-     */
     public Rental(int rentalId, Date rentalDate, Inventory objInventory,
-                  Customer objCustomer, Date returnDate, int staffId, Date lastUpdate) {
+                  Customer objCustomer, Date returnDate, Staff objStaff, Date lastUpdate) {
         this.rentalId     = rentalId;
         this.rentalDate   = rentalDate;
         this.objInventory = objInventory;
         this.objCustomer  = objCustomer;
         this.returnDate   = returnDate;
-        this.staffId      = staffId;
+        this.objStaff     = objStaff;
         this.lastUpdate   = lastUpdate;
     }
 
@@ -75,8 +52,8 @@ public final class Rental extends Entity {
     public void setObjCustomer(Customer c)      { this.objCustomer = c; }
     public Date getReturnDate()                 { return returnDate; }
     public void setReturnDate(Date d)           { this.returnDate = d; }
-    public int getStaffId()                     { return staffId; }
-    public void setStaffId(int id)              { this.staffId = id; }
+    public Staff getObjStaff()                  { return objStaff; }
+    public void setObjStaff(Staff s)            { this.objStaff = s; }
     public Date getLastUpdate()                 { return lastUpdate; }
     public void setLastUpdate(Date d)           { this.lastUpdate = d; }
 

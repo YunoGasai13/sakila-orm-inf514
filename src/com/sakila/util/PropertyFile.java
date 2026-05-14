@@ -5,23 +5,18 @@ import java.util.Properties;
 
 /**
  * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
- * INF514 Z06 | ORM Sakila DB
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
  *
- * Clase utilitaria para leer config.properties.
- * Evita hardcodear credenciales en el codigo fuente (buena practica).
- *
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
- * @version 1.0
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public class PropertyFile {
 
-    /** Objeto que almacena todas las propiedades del archivo */
     private Properties configProps = null;
 
-    /**
-     * Constructor: carga config.properties desde el directorio raiz del proyecto.
-     */
+    /** Carga config.properties desde la raiz del proyecto. */
     public PropertyFile() {
+        // Lee el archivo una sola vez al crear el objeto, luego cada getPropValue() trabaja en memoria
         try {
             File configFile = new File("config.properties");
             FileReader reader = new FileReader(configFile);
@@ -35,12 +30,7 @@ public class PropertyFile {
         }
     }
 
-    /**
-     * Retorna el valor de una propiedad por su clave.
-     *
-     * @param key nombre de la propiedad (ej: "dburl", "dbuser")
-     * @return String con el valor, o vacio si no existe
-     */
+    /** Retorna el valor de una propiedad por clave; vacio si no existe. */
     public String getPropValue(String key) {
         if (configProps != null && configProps.containsKey(key))
             return configProps.getProperty(key);

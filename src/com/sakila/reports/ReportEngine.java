@@ -1,28 +1,17 @@
 package com.sakila.reports;
 
 import com.sakila.model.*;
-import com.sakila.data.*;
 import java.sql.ResultSet;
 import java.util.Scanner;
 
 /**
  * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
- * INF514 Z06 | ORM Sakila DB
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
  *
- * Clase ReportEngine - modulo completo de reportes y estadisticas.
+ * Modulo de reportes y estadisticas. Incluye export a CSV y JSON.
  *
- * Reportes disponibles:
- *   1. Top 10 peliculas mas rentadas
- *   2. Pagos totales por tienda
- *   3. Rentas pendientes de devolucion (Aging)
- *   4. Top actores por cantidad de peliculas
- *   5. Estadisticas globales (total rentas, pagos, clientes activos)
- *   6. Renta por ciudad/pais (via JOIN)
- *   7. Export CSV de cualquier entidad
- *   8. Export JSON de cualquier entidad
- *
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
- * @version 1.0
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public class ReportEngine {
 
@@ -32,9 +21,7 @@ public class ReportEngine {
     private CustomerModel customerModel;
     private ActorModel    actorModel;
 
-    /**
-     * Constructor: inicializa todos los modelos necesarios para reportes.
-     */
+    /** Inicializa todos los modelos necesarios para los reportes. */
     public ReportEngine() {
         payModel      = new PaymentModel();
         rentalModel   = new RentalModel();
@@ -43,13 +30,9 @@ public class ReportEngine {
         actorModel    = new ActorModel();
     }
 
-    // ─── Reportes ─────────────────────────────────────────────────────────────
-
-    /**
-     * Reporte 1: Top 10 peliculas mas rentadas.
-     * SQL con JOIN entre rental, inventory y film.
-     */
+    /** Top 10 peliculas mas rentadas. JOIN rental + inventory + film. */
     public void reportTopFilms() {
+        // Cuento rentas agrupando por film y devuelvo las 10 con mas movimiento
         System.out.println("\n╔══════════════════════════════════════════════════════╗");
         System.out.println("║   ESTADISTICAS: TOP 10 PELICULAS MAS RENTADAS        ║");
         System.out.println("╠══════════════════════════════════════════════════════╣");
@@ -67,10 +50,9 @@ public class ReportEngine {
         System.out.println("╚══════════════════════════════════════════════════════╝");
     }
 
-    /**
-     * Reporte 2: Total y promedio de pagos por tienda (agrupado por staff_id).
-     */
+    /** Total, cantidad y promedio de pagos agrupado por tienda/staff. */
     public void reportPaymentsByStore() {
+        // SUM + AVG por staff_id para ver el desempeno de cada tienda
         System.out.println("\n╔══════════════════════════════════════════════════════╗");
         System.out.println("║   ESTADISTICAS: PAGOS/COBRANZAS POR TIENDA           ║");
         System.out.println("╠══════════════════════════════════════════════════════╣");
@@ -86,10 +68,9 @@ public class ReportEngine {
         System.out.println("╚══════════════════════════════════════════════════════╝");
     }
 
-    /**
-     * Reporte 3: Rentas pendientes de devolucion (Aging cuentas por cobrar).
-     */
+    /** Aging de cuentas por cobrar: rentas sin return_date. */
     public void reportPendingRentals() {
+        // Listo las rentas que aun no han sido devueltas (return_date IS NULL)
         System.out.println("\n╔══════════════════════════════════════════════════════╗");
         System.out.println("║   AGING: RENTAS PENDIENTES DE DEVOLUCION             ║");
         System.out.println("╠══════════════════════════════════════════════════════╣");
@@ -113,11 +94,9 @@ public class ReportEngine {
         System.out.println("╚══════════════════════════════════════════════════════╝");
     }
 
-    /**
-     * Reporte 4: Top 10 actores con mas peliculas en el catalogo.
-     * Actores y peliculas en las que participa.
-     */
+    /** Top 10 actores con mas peliculas registradas. */
     public void reportTopActors() {
+        // Cuento films por actor usando la tabla puente film_actor
         System.out.println("\n╔══════════════════════════════════════════════════════╗");
         System.out.println("║   ESTADISTICAS: TOP ACTORES POR PELICULAS            ║");
         System.out.println("╠══════════════════════════════════════════════════════╣");
@@ -135,10 +114,9 @@ public class ReportEngine {
         System.out.println("╚══════════════════════════════════════════════════════╝");
     }
 
-    /**
-     * Reporte 5: Rentas por ciudad y pais.
-     */
+    /** Rentas por ciudad y pais. JOIN rental + customer + address + city + country. */
     public void reportRentalsByCityCountry() {
+        // Cadena de JOINs: rental -> customer -> address -> city -> country
         System.out.println("\n╔══════════════════════════════════════════════════════╗");
         System.out.println("║   ESTADISTICAS: RENTAS POR CIUDAD / PAIS             ║");
         System.out.println("╠══════════════════════════════════════════════════════╣");
@@ -158,10 +136,9 @@ public class ReportEngine {
         System.out.println("╚══════════════════════════════════════════════════════╝");
     }
 
-    /**
-     * Reporte 6: Estadisticas globales del sistema.
-     */
+    /** Totales del sistema: rentas, pagos, peliculas, clientes activos, pendientes. */
     public void reportGlobalStats() {
+        // Una serie de COUNT/SUM/AVG sueltos para mostrar el panorama general
         System.out.println("\n╔══════════════════════════════════════════════════════╗");
         System.out.println("║   ESTADISTICAS GLOBALES DEL SISTEMA                  ║");
         System.out.println("╠══════════════════════════════════════════════════════╣");
@@ -186,9 +163,9 @@ public class ReportEngine {
         System.out.println("╚══════════════════════════════════════════════════════╝");
     }
 
-    /**
-     * Exporta la lista de actores en CSV y JSON.
-     */
+    // ── Exports CSV + JSON
+
+    /** Imprime actores en CSV y JSON. */
     public void exportActors() {
         System.out.println("\n--- EXPORT CSV: ACTORES ---");
         actorModel.Get();
@@ -197,9 +174,7 @@ public class ReportEngine {
         System.out.println(actorModel.Serializer());
     }
 
-    /**
-     * Exporta la lista de peliculas en CSV y JSON.
-     */
+    /** Imprime peliculas en CSV y JSON. */
     public void exportFilms() {
         System.out.println("\n--- EXPORT CSV: PELICULAS ---");
         filmModel.Get();
@@ -208,9 +183,7 @@ public class ReportEngine {
         System.out.println(filmModel.Serializer());
     }
 
-    /**
-     * Exporta la lista de clientes en CSV y JSON.
-     */
+    /** Imprime clientes en CSV y JSON. */
     public void exportCustomers() {
         System.out.println("\n--- EXPORT CSV: CLIENTES ---");
         customerModel.Get();
@@ -219,11 +192,9 @@ public class ReportEngine {
         System.out.println(customerModel.Serializer());
     }
 
-    /**
-     * Muestra el menu de reportes y ejecuta la opcion seleccionada.
-     * @param scanner Scanner para leer la opcion del usuario
-     */
+    /** Menu de reportes y exports. */
     public void showReportMenu(Scanner scanner) {
+        // Loop del submenu de reportes hasta que el usuario elija 0
         int opt;
         do {
             System.out.println("\n╔══════════════════════════════════════╗");
@@ -258,9 +229,7 @@ public class ReportEngine {
         } while (opt != 0);
     }
 
-    /**
-     * Cierra todos los modelos y libera conexiones DB.
-     */
+    /** Libera conexiones de todos los modelos usados. */
     public void close() {
         payModel.close(); rentalModel.close(); filmModel.close();
         customerModel.close(); actorModel.close();

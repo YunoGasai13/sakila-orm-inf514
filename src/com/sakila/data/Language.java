@@ -4,34 +4,19 @@ import java.util.Date;
 
 /**
  * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
- * INF514 Z06 | ORM Sakila DB
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
  *
- * Entidad Language - mapea la tabla `language` de sakila.
- * Sin FK externas. Usada por Film mediante composicion.
- *
- * Tabla: language(language_id, name, last_update)
- *
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
- * @version 1.0
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public final class Language extends Entity {
 
-    /** PK autoincrement */
     public int languageId;
-    /** Nombre del idioma (ej: "English", "French") */
     public String name;
-    /** Fecha ultima actualizacion */
     public Date lastUpdate;
 
-    /** Constructor vacio */
     public Language() {}
 
-    /**
-     * Constructor completo.
-     * @param languageId ID del idioma
-     * @param name       nombre del idioma
-     * @param lastUpdate ultima actualizacion
-     */
     public Language(int languageId, String name, Date lastUpdate) {
         this.languageId = languageId;
         this.name       = name;

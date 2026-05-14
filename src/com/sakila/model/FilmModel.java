@@ -8,51 +8,36 @@ import java.util.stream.Collectors;
 
 /**
  * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
- * INF514 Z06 | ORM Sakila DB
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
  *
- * Modelo FilmModel - hijo CONCRETO y FINAL de DataContext.
- * Gestiona el ArrayList de objetos Film con CRUD completo.
- *
- * En el Mapping() se construye el objeto Language embebido en Film
- * mediante un JOIN implicito para respetar la agregacion de FK:
- *   film.objLanguage.name => "English"
- *
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
- * @version 1.0
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public final class FilmModel extends DataContext implements iDatapost {
 
-    /** ArrayList con las peliculas cargadas en memoria */
     private ArrayList<Film> allData;
-    /** Modelo de Language para resolver la FK por agregacion */
+    /** Modelo auxiliar para resolver la FK language_id por agregacion. */
     private LanguageModel langModel;
 
-    /**
-     * Constructor: configura DataContext para la tabla film.
-     * Tabla: film | PK: film_id | Busqueda: title | FK: language_id
-     */
+    /** tabla=film | PK=film_id | busqueda por title | FK=language_id. */
     public FilmModel() {
         super("film", "film_id", "title",
               "language_id", "title", "last_update");
         langModel = new LanguageModel();
     }
 
-    /**
-     * Mapea ResultSet a objetos Film.
-     * Construye el objeto Language embebido (FK por agregacion).
-     * Usa inMemSearch del LanguageModel para resolver la FK en memoria.
-     *
-     * @param rSet ResultSet de la tabla film
-     */
+    /** ResultSet -> ArrayList<Film>. Inyecta el objeto Language en cada Film (FK agregada). */
     @Override
     public void Mapping(ResultSet rSet) {
+        // Convierto cada fila en un Film y le adjunto su Language por agregacion
         allData = new ArrayList<>();
         if (rSet == null) return;
-        // Carga todos los idiomas en memoria para resolver FK
+        // Precarga idiomas una sola vez para evitar N+1 queries
         if (langModel.getData() == null || langModel.getData().isEmpty())
             langModel.Get(true);
         try {
             while (rSet.next()) {
+                // Resuelvo la FK language_id buscando en memoria
                 int langId = rSet.getInt("language_id");
                 Language objLang = (Language) langModel.inMemSearch(langId);
                 if (objLang == null) objLang = new Language(langId, "Unknown", null);
@@ -62,7 +47,7 @@ public final class FilmModel extends DataContext implements iDatapost {
                     rSet.getString("title"),
                     rSet.getString("description"),
                     rSet.getInt("release_year"),
-                    objLang,                         // FK resuelta por agregacion
+                    objLang,
                     rSet.getInt("rental_duration"),
                     rSet.getBigDecimal("rental_rate"),
                     rSet.getInt("length"),
@@ -85,11 +70,7 @@ public final class FilmModel extends DataContext implements iDatapost {
     @Override public ArrayList<Film> Get(Date d1, Date d2)      { Mapping(super.Find(d1,d2));  return allData; }
     @Override public ArrayList<Film> getData()                   { return allData; }
 
-    /**
-     * Obtiene lista completa de peliculas (hasta 5000).
-     * @param full true para modo completo
-     * @return ArrayList con todas las peliculas
-     */
+    /** Modo full: trae hasta 5000 films (usado por InventoryModel para resolver FK). */
     public ArrayList<Film> Get(boolean full) {
         Mapping(super.Find(full));
         return allData;
@@ -97,6 +78,7 @@ public final class FilmModel extends DataContext implements iDatapost {
 
     @Override
     public boolean Post(Entity odata) {
+        // Asigno el siguiente film_id (MAX+1) y delego el INSERT al padre
         Film f = (Film) odata;
         f.filmId     = (int)(super.getMaxID() + 1);
         f.lastUpdate = new Date();
@@ -105,20 +87,19 @@ public final class FilmModel extends DataContext implements iDatapost {
 
     @Override public boolean Put(Entity odata)    { return super.dbPut(SerializerMap(odata)); }
 
-    /**
-     * Delete: Film no tiene campo active.
-     * Se usa soft delete cambiando rental_rate a 0 (pelicula desactivada).
-     */
+    /** Film no tiene campo active; se desactiva poniendo rental_rate=0. */
     @Override
     public boolean Delete(Entity odata) {
+        // Sakila.film no tiene active, asi que marco la pelicula con precio 0 = no rentable
         Film f = (Film) odata;
         HashMap<String, String> map = SerializerMap(f);
-        map.put("rental_rate", "0.00"); // precio 0 = desactivada
+        map.put("rental_rate", "0.00");
         return super.dbPut(map);
     }
 
     @Override
     public HashMap<String, String> SerializerMap(Entity odata) {
+        // Vuelco cada campo del Film a su columna; el FK language_id sale del objeto agregado
         if (!(odata instanceof Film)) return null;
         Film f = (Film) odata;
         int langId = (f.objLanguage != null) ? f.objLanguage.languageId : 1;
@@ -175,7 +156,7 @@ public final class FilmModel extends DataContext implements iDatapost {
         return found.isEmpty() ? null : found.get(0);
     }
 
-    /** Cierra tambien el LanguageModel auxiliar */
+    /** Cierra tambien el modelo auxiliar de idiomas. */
     @Override
     public void close() {
         super.close();

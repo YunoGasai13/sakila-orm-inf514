@@ -5,69 +5,33 @@ import java.util.Date;
 
 /**
  * Universidad Autonoma de Santo Domingo | Facultad de Ciencias
- * INF514 Z06 | ORM Sakila DB
+ * INF514 Z06 | Proyecto Final: ORM Data Manager - Sakila DB
  *
- * Entidad Film - mapea la tabla `film` de sakila.
+ * FK language_id manejada por agregacion de objeto Language.
  *
- * FK gestionada por COMPOSICION/AGREGACION:
- *   Language objLanguage  <--- en lugar de int languageId
- *
- * Acceso: film.objLanguage.name  (ej: "English")
- *
- * Tabla: film(film_id, title, description, release_year, language_id,
- *             rental_duration, rental_rate, length, replacement_cost,
- *             rating, last_update)
- *
- * @author [TU NOMBRE] | Matricula: [TU MATRICULA]
- * @version 1.0
+ * @author Ismailyn Reyes
+ * Matricula: 100437845
  */
 public final class Film extends Entity {
 
-    /** PK autoincrement */
     public int filmId;
-    /** Titulo de la pelicula */
     public String title;
-    /** Sinopsis */
     public String description;
-    /** Año de lanzamiento */
     public int releaseYear;
-    /**
-     * FK language_id gestionada por AGREGACION de objeto Language.
-     * Ejemplo: film.objLanguage.name => "English"
-     */
+    /** FK language_id en forma de objeto. Acceso: film.objLanguage.name */
     public Language objLanguage;
-    /** Duracion del alquiler en dias */
     public int rentalDuration;
-    /** Precio de alquiler */
     public BigDecimal rentalRate;
-    /** Duracion en minutos */
     public int length;
-    /** Costo de reemplazo */
     public BigDecimal replacementCost;
-    /** Clasificacion: G, PG, PG-13, R, NC-17 */
+    /** G, PG, PG-13, R, NC-17 */
     public String rating;
-    /** Fecha ultima actualizacion */
     public Date lastUpdate;
 
-    /** Constructor vacio */
     public Film() {
         this.objLanguage = new Language();
     }
 
-    /**
-     * Constructor completo con objeto Language embebido.
-     * @param filmId          ID de la pelicula
-     * @param title           titulo
-     * @param description     sinopsis
-     * @param releaseYear     año
-     * @param objLanguage     objeto Language (FK por agregacion)
-     * @param rentalDuration  dias de alquiler
-     * @param rentalRate      precio alquiler
-     * @param length          duracion minutos
-     * @param replacementCost costo reemplazo
-     * @param rating          clasificacion
-     * @param lastUpdate      ultima actualizacion
-     */
     public Film(int filmId, String title, String description, int releaseYear,
                 Language objLanguage, int rentalDuration, BigDecimal rentalRate,
                 int length, BigDecimal replacementCost, String rating, Date lastUpdate) {
