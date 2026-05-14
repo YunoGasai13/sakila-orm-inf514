@@ -1,10 +1,4 @@
-# =============================================
-# .gitignore - Sakila ORM INF514
-# =============================================
-
-# IMPORTANTE: config.properties contiene password de DB
-# Descomenta la siguiente linea si no quieres subir tus credenciales:
-# config.properties
+config.properties
 
 # IntelliJ IDEA
 .idea/
@@ -20,7 +14,7 @@ out/
 *.class
 target/
 
-# JAR files (excepto el JAR final del proyecto si lo incluyes)
+# JAR files
 # *.jar
 
 # OS files
