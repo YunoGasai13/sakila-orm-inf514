@@ -15,12 +15,6 @@ out/
 target/
 build/
 
-# Libraries (MySQL Connector descargado)
-lib/
-
-# JAR files compilados
-*.jar
-
 # OS files
 .DS_Store
 Thumbs.db

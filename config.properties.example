@@ -1,0 +1,5 @@
+# Copiar este archivo como config.properties y completar con tus credenciales locales
+dburl=jdbc:mysql://localhost:3306/sakila
+dbuser=root
+dbpassword=TU_PASSWORD_AQUI
+dbdriver=com.mysql.cj.jdbc.Driver

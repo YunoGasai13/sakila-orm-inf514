@@ -89,16 +89,36 @@ config.properties           (no se sube al repo, esta en .gitignore)
 ## Configuracion
 
 1. Verificar que la base `sakila` esta instalada en MySQL.
-2. Crear `config.properties` en la raiz del proyecto con las credenciales locales:
-   ```properties
-   dburl=jdbc:mysql://localhost:3306/sakila
-   dbuser=root
-   dbpassword=TU_PASSWORD
-   dbdriver=com.mysql.cj.jdbc.Driver
+2. Copiar `config.properties.example` a `config.properties` y reemplazar `TU_PASSWORD` con la password real de tu MySQL:
+   ```bash
+   cp config.properties.example config.properties
    ```
-3. Agregar `mysql-connector-j-8.x.x.jar` al classpath del proyecto.
-4. Marcar `src` como Sources Root en IntelliJ.
+3. Marcar `src` como Sources Root en IntelliJ.
+4. Agregar el driver al classpath (ver seccion siguiente).
 5. Ejecutar `com.sakila.Main`.
+
+---
+
+## Dependencias incluidas
+
+El MySQL Connector/J ya viene en la carpeta `lib/`. Solo agrega el JAR al classpath del proyecto en IntelliJ:
+
+```
+File → Project Structure → Libraries → + → Java
+   → seleccionar lib/mysql-connector-j-8.x.x.jar
+```
+
+---
+
+## Ejecutar desde el JAR ya compilado
+
+Para correr sin compilar, desde la raiz del proyecto:
+
+```bash
+java -jar sakila-orm-inf514.jar
+```
+
+Necesita que en la misma carpeta esten: `sakila-orm-inf514.jar`, `lib/mysql-connector-j-8.x.x.jar` y `config.properties`.
 
 ---
 
